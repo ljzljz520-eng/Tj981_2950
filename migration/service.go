@@ -255,7 +255,19 @@ func (s *Service) runAttempt(ctx context.Context, state *taskState, studentIDs [
 			options.AfterRecord(event)
 		}
 		if ctx.Err() != nil {
+			// The caller signaled cancellation after this record. Roll back the
+			// transaction so the target never commits a partial archive, mark the
+			// task as canceled, and surface the cancellation so it can be retried
+			// safely from a clean target state.
 			s.logger.Printf("task=%s cancellation requested after source=%s", event.TaskID, studentID)
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				s.logger.Printf("task=%s rollback error=%v", event.TaskID, rollbackErr)
+			}
+			s.setStatus(state, StatusCanceled)
+			s.emitProgress(state, "", options.OnProgress)
+			task := s.taskSnapshot(state)
+			s.logger.Printf("task=%s status=%s processed=%d succeeded=%d failed=%d", task.TaskID, task.Status, task.Processed, task.Succeeded, task.Failed)
+			return task, ctx.Err()
 		}
 	}
 	if err := tx.Commit(); err != nil {
