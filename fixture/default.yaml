@@ -1,0 +1,61 @@
+classes:
+  - class_id: CLASS-C1-WEEKDAY
+    title: Weekday C1 Standard
+    vehicle_category: C1
+  - class_id: CLASS-C2-WEEKEND
+    title: Weekend C2 Intensive
+    vehicle_category: C2
+students:
+  - legacy_id: STU-001
+    name: Lin Mei
+    identity_number: "110101199001011234"
+    class_id: CLASS-C1-WEEKDAY
+  - legacy_id: STU-002
+    name: Zhao Ming
+    identity_number: "310101198805062345"
+    class_id: CLASS-C2-WEEKEND
+  - legacy_id: STU-003
+    name: Chen Yu
+    identity_number: "440101199512123456"
+    class_id: CLASS-C1-WEEKDAY
+hours:
+  - student_id: STU-001
+    theory_minutes: 720
+    practice_minutes: 1440
+  - student_id: STU-002
+    theory_minutes: 660
+    practice_minutes: 1320
+  - student_id: STU-003
+    theory_minutes: 780
+    practice_minutes: 1560
+exams:
+  - student_id: STU-001
+    subject: subject-1
+    attempt: 1
+    score: 96
+    passed: true
+  - student_id: STU-001
+    subject: subject-2
+    attempt: 1
+    score: 90
+    passed: true
+  - student_id: STU-002
+    subject: subject-1
+    attempt: 1
+    score: 82
+    passed: true
+  - student_id: STU-002
+    subject: subject-2
+    attempt: 1
+    score: 76
+    passed: false
+  - student_id: STU-002
+    subject: subject-2
+    attempt: 2
+    score: 91
+    passed: true
+  - student_id: STU-003
+    subject: subject-1
+    attempt: 1
+    score: 98
+    passed: true
