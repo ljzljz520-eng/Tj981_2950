@@ -233,9 +233,28 @@ func (s *Service) createTask(studentIDs []string) *taskState {
 func (s *Service) runAttempt(ctx context.Context, state *taskState, studentIDs []string, options RunOptions) (MigrationTask, error) {
 	s.setStatus(state, StatusRunning)
 	s.emitProgress(state, "", options.OnProgress)
+	if err := ctx.Err(); err != nil {
+		s.setStatus(state, StatusCanceled)
+		s.emitProgress(state, "", options.OnProgress)
+		return s.taskSnapshot(state), err
+	}
 	tx := s.target.Begin()
+	cancelAttempt := func(cause error) (MigrationTask, error) {
+		rollbackErr := tx.Rollback()
+		s.setStatus(state, StatusCanceled)
+		s.emitProgress(state, "", options.OnProgress)
+		task := s.taskSnapshot(state)
+		s.logger.Printf("task=%s status=%s processed=%d succeeded=%d failed=%d", task.TaskID, task.Status, task.Processed, task.Succeeded, task.Failed)
+		if rollbackErr != nil {
+			return task, errors.Join(cause, fmt.Errorf("rollback target transaction: %w", rollbackErr))
+		}
+		return task, cause
+	}
 	stagedIDs := make([]string, 0, len(studentIDs))
 	for _, studentID := range studentIDs {
+		if err := ctx.Err(); err != nil {
+			return cancelAttempt(err)
+		}
 		student, err := s.source.Student(ctx, studentID)
 		if err == nil {
 			var learner TargetLearner
@@ -254,9 +273,13 @@ func (s *Service) runAttempt(ctx context.Context, state *taskState, studentIDs [
 		if options.AfterRecord != nil {
 			options.AfterRecord(event)
 		}
-		if ctx.Err() != nil {
+		if err := ctx.Err(); err != nil {
 			s.logger.Printf("task=%s cancellation requested after source=%s", event.TaskID, studentID)
+			return cancelAttempt(err)
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return cancelAttempt(err)
 	}
 	if err := tx.Commit(); err != nil {
 		for _, studentID := range stagedIDs {
